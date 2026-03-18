@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Resource Person Management System — CBSE CoE Bhopal</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f0f4ff;
+    --surface: #ffffff;
+    --card: #ffffff;
+    --card2: #f7f9ff;
+    --border: #dde3f5;
+    --border2: #c8d0eb;
+    --accent: #3b5bdb;
+    --accent-light: #e8ecfd;
+    --accent2: #0ca678;
+    --accent2-light: #d3f9ee;
+    --accent3: #e67700;
+    --accent3-light: #fff3cd;
+    --accent4: #7048e8;
+    --muted: #8b94b8;
+    --text: #1a2150;
+    --text2: #4a547a;
+    --danger: #e03131;
+    --trainer-color: #3b5bdb;
+    --trainee-color: #0ca678;
+    --shadow-sm: 0 1px 4px rgba(59,91,219,.07), 0 2px 12px rgba(59,91,219,.05);
+    --shadow-md: 0 4px 20px rgba(59,91,219,.10), 0 1px 4px rgba(59,91,219,.06);
+    --shadow-lg: 0 8px 40px rgba(59,91,219,.13), 0 2px 8px rgba(59,91,219,.08);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ── ANIMATED BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 900px 600px at 10% 10%, rgba(134,158,255,.22) 0%, transparent 70%),
+      radial-gradient(ellipse 700px 500px at 90% 20%, rgba(168,230,207,.28) 0%, transparent 65%),
+      radial-gradient(ellipse 600px 400px at 50% 90%, rgba(193,168,255,.18) 0%, transparent 70%),
+      radial-gradient(ellipse 500px 350px at 80% 75%, rgba(255,214,102,.16) 0%, transparent 65%),
+      linear-gradient(160deg, #e8eeff 0%, #f0faf5 40%, #f5f0ff 70%, #fffbe8 100%);
+    pointer-events: none;
+  }
+
+  .orb {
+    position: fixed; border-radius: 50%;
+    filter: blur(70px); opacity: .35;
+    pointer-events: none; z-index: 0;
+    animation: floatOrb 18s ease-in-out infinite;
+  }
+  .orb1 { width: 520px; height: 520px; background: radial-gradient(circle, #7c9ef7, #b8c8ff); top: -180px; left: -160px; animation-duration: 22s; }
+  .orb2 { width: 420px; height: 420px; background: radial-gradient(circle, #52d9a4, #a8f0d4); top: 30%; right: -140px; animation-duration: 18s; animation-delay: -6s; }
+  .orb3 { width: 350px; height: 350px; background: radial-gradient(circle, #c4a7f5, #e4d0ff); bottom: -100px; left: 30%; animation-duration: 25s; animation-delay: -12s; }
+  .orb4 { width: 280px; height: 280px; background: radial-gradient(circle, #ffd166, #ffe8a3); bottom: 20%; right: 20%; animation-duration: 20s; animation-delay: -4s; }
+
+  @keyframes floatOrb {
+    0%,100% { transform: translate(0,0) scale(1); }
+    33%      { transform: translate(30px,-40px) scale(1.05); }
+    66%      { transform: translate(-20px,30px) scale(.95); }
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 16px 40px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(255,255,255,.82);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255,255,255,.8);
+    box-shadow: 0 2px 24px rgba(59,91,219,.08);
+  }
+
+  header h1 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 800; font-size: 1.55rem;
+    letter-spacing: -.02em;
+    color: var(--accent);
+    line-height: 1.2;
+  }
+
+  header h1 span { color: var(--accent); }
+
+  .header-sub {
+    font-size: .78rem;
+    color: var(--accent);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+    letter-spacing: .01em;
+    margin-top: 3px;
+    line-height: 1.55;
+  }
+
+  .badge {
+    margin-left: auto;
+    background: var(--accent-light);
+    border: 1px solid rgba(59,91,219,.18);
+    border-radius: 20px;
+    padding: 5px 16px;
+    font-size: .72rem;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* ── LAYOUT ── */
+  main {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 44px 24px 100px;
+    position: relative; z-index: 1;
+  }
+
+  /* ── SECTION TITLES ── */
+  .section-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: .7rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .section-title::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+  }
+
+  /* ── UPLOAD ZONE ── */
+  .upload-zone {
+    border: 2px dashed var(--border2);
+    border-radius: 20px;
+    padding: 44px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .3s;
+    position: relative;
+    overflow: hidden;
+    background: rgba(255,255,255,.7);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .upload-zone::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(59,91,219,.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(232,236,253,.5);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+
+  .upload-zone.loaded {
+    border-color: var(--accent2);
+    border-style: solid;
+    background: rgba(211,249,238,.3);
+  }
+
+  .upload-icon { font-size: 2.8rem; margin-bottom: 14px; }
+
+  .upload-zone h2 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.15rem; font-weight: 700;
+    margin-bottom: 6px; color: var(--text);
+  }
+
+  .upload-zone p { color: var(--muted); font-size: .88rem; }
+
+  .file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+  .loaded-info {
+    margin-top: 14px;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent2-light);
+    border: 1px solid rgba(12,166,120,.25);
+    border-radius: 20px;
+    padding: 5px 16px;
+    font-size: .82rem; color: var(--accent2);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+  }
+
+  /* ── REQUEST FORM ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 20px;
+  }
+
+  @media(max-width: 620px) { .form-grid { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 8px; }
+
+  label {
+    font-size: .74rem; font-weight: 700;
+    color: var(--text2);
+    letter-spacing: .05em; text-transform: uppercase;
+  }
+
+  input, select {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: .95rem;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+    width: 100%;
+    appearance: none;
+    box-shadow: var(--shadow-sm);
+  }
+
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59,91,219,.12), var(--shadow-sm);
+  }
+
+  select option { background: #fff; color: var(--text); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px 28px;
+    border-radius: 12px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700; font-size: .95rem;
+    border: none; cursor: pointer;
+    transition: all .22s;
+    letter-spacing: .01em;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent4) 100%);
+    color: #fff;
+    box-shadow: 0 4px 18px rgba(59,91,219,.3);
+  }
+
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(59,91,219,.38); }
+  .btn-primary:disabled { opacity: .4; transform: none; cursor: not-allowed; box-shadow: none; }
+
+  .btn-secondary {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    color: var(--text2);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 36px 0;
+  }
+
+  /* ── STATUS BAR ── */
+  #status-bar {
+    display: none;
+    align-items: center; gap: 12px;
+    background: var(--accent-light);
+    border: 1px solid rgba(59,91,219,.2);
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: .88rem;
+    color: var(--accent);
+    margin-bottom: 24px;
+    font-weight: 500;
+  }
+
+  #status-bar.visible { display: flex; }
+  #status-bar .spinner {
+    width: 18px; height: 18px;
+    border: 2.5px solid rgba(59,91,219,.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── RESULTS ── */
+  #results { display: none; }
+  #results.visible { display: block; }
+  .result-section { margin-top: 24px; }
+
+  .result-header {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 20px; margin-top: 8px;
+  }
+
+  .result-header h2 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.05rem; font-weight: 800;
+    color: var(--text);
+  }
+
+  .mode-tag {
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: .74rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+  }
+
+  .mode-trainer {
+    background: var(--accent-light);
+    color: var(--trainer-color);
+    border: 1px solid rgba(59,91,219,.2);
+  }
+  .mode-trainee {
+    background: var(--accent2-light);
+    color: var(--trainee-color);
+    border: 1px solid rgba(12,166,120,.2);
+  }
+
+  /* ── RP CARDS ── */
+  .rp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 18px;
+    margin-bottom: 36px;
+  }
+
+  .rp-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .22s, transform .22s, box-shadow .22s;
+    animation: fadeUp .38s ease both;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .rp-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .rp-card.trainer-card {
+    border-top: 3px solid var(--trainer-color);
+    background: linear-gradient(160deg, rgba(232,236,253,.3) 0%, #fff 60%);
+  }
+
+  .rp-card.trainee-card {
+    border-top: 3px solid var(--trainee-color);
+    background: linear-gradient(160deg, rgba(211,249,238,.3) 0%, #fff 60%);
+  }
+
+  .rp-card::after {
+    content: '';
+    position: absolute; top: 0; right: 0;
+    width: 100px; height: 100px;
+    background: radial-gradient(circle at top right, rgba(59,91,219,.05), transparent 70%);
+    pointer-events: none;
+  }
+
+  .rp-rank {
+    position: absolute; top: 16px; right: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .72rem; font-weight: 600;
+    color: var(--muted);
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2px 8px;
+  }
+
+  .rp-name {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.02rem; font-weight: 800;
+    margin-bottom: 3px;
+    padding-right: 48px;
+    color: var(--text);
+  }
+
+  .rp-school {
+    font-size: .8rem;
+    color: var(--text2);
+    margin-bottom: 14px;
+    line-height: 1.45;
+    font-weight: 500;
+  }
+
+  .rp-meta { display: flex; flex-direction: column; gap: 6px; }
+
+  .meta-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: .83rem; color: var(--text2); font-weight: 500;
+  }
+
+  .meta-icon {
+    font-size: .95rem; width: 20px; text-align: center;
+    flex-shrink: 0;
+  }
+
+  .meta-row a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .meta-row a:hover { text-decoration: underline; }
+
+  .dist-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--accent3-light);
+    border: 1px solid rgba(230,119,0,.18);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .78rem; font-weight: 600;
+    color: var(--accent3);
+    margin-top: 12px;
+  }
+
+  .topics-pill {
+    display: inline-block;
+    background: var(--accent-light);
+    border: 1px solid rgba(59,91,219,.15);
+    border-radius: 6px;
+    padding: 2px 9px;
+    font-size: .72rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--accent);
+    font-weight: 500;
+    margin: 2px 2px 0 0;
+  }
+
+  .trainee-card .topics-pill {
+    background: var(--accent2-light);
+    border-color: rgba(12,166,120,.15);
+    color: var(--accent2);
+  }
+
+  .topics-label {
+    font-size: .7rem; text-transform: uppercase;
+    letter-spacing: .07em; color: var(--muted);
+    margin-top: 12px; margin-bottom: 5px;
+    font-weight: 700;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center; padding: 48px 40px;
+    color: var(--muted);
+    background: rgba(255,255,255,.6);
+    border: 1.5px dashed var(--border);
+    border-radius: 18px;
+    margin-bottom: 32px;
+  }
+
+  .empty .empty-icon { font-size: 2.2rem; margin-bottom: 10px; }
+  .empty p { font-size: .9rem; font-weight: 500; }
+
+  /* ── INFO BANNER / DEVELOPER CREDIT ── */
+  .info-banner {
+    background: rgba(255,255,255,.7);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 24px;
+    margin-top: 48px;
+    display: flex; gap: 14px;
+    align-items: center;
+    font-size: .84rem;
+    color: var(--muted);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ── HOST INFO ── */
+  .host-info {
+    background: linear-gradient(135deg, rgba(59,91,219,.07), rgba(112,72,232,.04));
+    border: 1.5px solid rgba(59,91,219,.15);
+    border-radius: 14px;
+    padding: 16px 22px;
+    margin-bottom: 28px;
+    display: flex; align-items: center; gap: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .host-icon { font-size: 1.6rem; }
+
+  .host-info h3 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: .95rem; font-weight: 800;
+    margin-bottom: 3px; color: var(--text);
+  }
+
+  .host-info p { font-size: .82rem; color: var(--text2); font-weight: 500; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ── ADD BUTTONS ── */
+  .card-actions {
+    display: flex; gap: 8px; margin-top: 16px;
+    border-top: 1.5px solid var(--border);
+    padding-top: 14px;
+  }
+
+  .btn-add {
+    flex: 1; padding: 8px 10px;
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .78rem; font-weight: 600;
+    border: 1.5px solid var(--border);
+    cursor: pointer; transition: all .18s;
+    background: var(--card2);
+    color: var(--text2);
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+
+  .btn-add.slot1 { border-color: rgba(59,91,219,.3); color: var(--accent); background: var(--accent-light); }
+  .btn-add.slot1:hover { background: rgba(59,91,219,.15); border-color: var(--accent); box-shadow: 0 3px 12px rgba(59,91,219,.15); transform: translateY(-1px); }
+  .btn-add.slot2 { border-color: rgba(230,119,0,.3); color: var(--accent3); background: var(--accent3-light); }
+  .btn-add.slot2:hover { background: rgba(230,119,0,.15); border-color: var(--accent3); box-shadow: 0 3px 12px rgba(230,119,0,.15); transform: translateY(-1px); }
+
+  .btn-add.active-slot1 { background: var(--accent); border-color: var(--accent); color: #fff; box-shadow: 0 3px 12px rgba(59,91,219,.3); }
+  .btn-add.active-slot2 { background: var(--accent3); border-color: var(--accent3); color: #fff; box-shadow: 0 3px 12px rgba(230,119,0,.3); }
+  .btn-add:disabled { opacity: .6; transform: none !important; cursor: default; }
+
+  /* ── SELECTION PANEL ── */
+  #selection-panel {
+    display: none;
+    background: rgba(255,255,255,.9);
+    border: 1.5px solid var(--border);
+    border-radius: 18px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+    position: sticky; top: 76px; z-index: 50;
+    backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-md);
+  }
+
+  #selection-panel.visible { display: block; }
+
+  .panel-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: .7rem; font-weight: 800;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 14px;
+  }
+
+  .slots-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 14px; align-items: center;
+  }
+
+  @media(max-width:620px) { .slots-row { grid-template-columns: 1fr; } }
+
+  .slot-box {
+    border-radius: 12px; padding: 13px 16px;
+    border: 1.5px dashed var(--border);
+    min-height: 68px;
+    transition: border-color .2s, background .2s;
+    background: var(--card2);
+  }
+
+  .slot-box.slot1-box { border-color: rgba(59,91,219,.25); background: rgba(232,236,253,.35); }
+  .slot-box.slot2-box { border-color: rgba(230,119,0,.25); background: rgba(255,243,205,.35); }
+  .slot-box.filled { border-style: solid; }
+  .slot-box.slot1-box.filled { background: rgba(232,236,253,.6); }
+  .slot-box.slot2-box.filled { background: rgba(255,243,205,.6); }
+
+  .slot-label {
+    font-size: .67rem; font-family: 'JetBrains Mono', monospace;
+    letter-spacing: .09em; text-transform: uppercase;
+    margin-bottom: 5px; font-weight: 600;
+  }
+
+  .slot1-box .slot-label { color: var(--accent); }
+  .slot2-box .slot-label { color: var(--accent3); }
+
+  .slot-name {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: .92rem; font-weight: 800; color: var(--text);
+  }
+
+  .slot-school { font-size: .75rem; color: var(--text2); margin-top: 2px; font-weight: 500; }
+
+  .slot-empty { color: var(--muted); font-size: .82rem; padding-top: 6px; font-weight: 500; }
+
+  .btn-clear-slot {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: .82rem;
+    padding: 2px 6px; border-radius: 5px;
+    transition: all .15s; float: right;
+  }
+
+  .btn-clear-slot:hover { color: var(--danger); background: rgba(224,49,49,.08); }
+
+  .btn-save-excel {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 22px; border-radius: 12px;
+    background: linear-gradient(135deg, #0ca678, #099268);
+    color: #fff;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700; font-size: .88rem;
+    border: none; cursor: pointer; transition: all .2s;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(12,166,120,.28);
+  }
+
+  .btn-save-excel:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(12,166,120,.38); }
+  .btn-save-excel:disabled { opacity: .35; transform: none; cursor: not-allowed; box-shadow: none; }
+
+  /* ── TOPIC SELECT ── */
+  .select-wrapper { position: relative; }
+  .select-wrapper::after {
+    content: '▾';
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--muted); pointer-events: none; font-size: .85rem;
+  }
+
+  /* ── HOST PICKER MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(26,33,80,.35);
+    backdrop-filter: blur(8px);
+    align-items: center; justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal-box {
+    background: rgba(255,255,255,.97);
+    border: 1.5px solid var(--border);
+    border-radius: 22px;
+    width: min(600px, 95vw);
+    max-height: 82vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 32px 80px rgba(26,33,80,.22), 0 4px 16px rgba(26,33,80,.08);
+    animation: modalIn .22s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(24px) scale(.97); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .modal-header {
+    padding: 22px 26px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, rgba(232,236,253,.5), rgba(255,255,255,.8));
+  }
+
+  .modal-header h3 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1rem; font-weight: 800; color: var(--text);
+  }
+
+  .modal-close {
+    background: var(--card2); border: 1px solid var(--border); cursor: pointer;
+    color: var(--muted); font-size: 1rem; padding: 5px 10px;
+    border-radius: 8px; transition: all .15s;
+  }
+
+  .modal-close:hover { color: var(--danger); border-color: rgba(224,49,49,.3); background: rgba(224,49,49,.06); }
+
+  .modal-search {
+    padding: 14px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+
+  .modal-search input {
+    width: 100%; background: var(--card2);
+    border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 10px 16px; color: var(--text);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: .92rem; outline: none; transition: border-color .2s;
+    box-shadow: none;
+  }
+
+  .modal-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,91,219,.1); }
+
+  .modal-list { overflow-y: auto; flex: 1; padding: 10px 14px; }
+
+  .host-item {
+    padding: 13px 16px; border-radius: 12px;
+    cursor: pointer; border: 1.5px solid transparent;
+    transition: all .15s; margin-bottom: 5px;
+    display: flex; align-items: center; gap: 14px;
+    background: var(--card2);
+  }
+
+  .host-item:hover { background: var(--accent-light); border-color: rgba(59,91,219,.2); }
+
+  .host-item-icon {
+    width: 36px; height: 36px;
+    background: var(--accent-light); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; flex-shrink: 0;
+    border: 1px solid rgba(59,91,219,.12);
+  }
+
+  .host-item-body { flex: 1; min-width: 0; }
+
+  .host-item-name {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: .9rem; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: var(--text);
+  }
+
+  .host-item-meta {
+    font-size: .75rem; color: var(--muted);
+    margin-top: 3px; display: flex; gap: 10px; flex-wrap: wrap;
+    font-weight: 500;
+  }
+
+  .host-topic-badge {
+    background: var(--accent-light);
+    border: 1px solid rgba(59,91,219,.18);
+    border-radius: 5px; padding: 1px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .72rem; color: var(--accent); font-weight: 600;
+  }
+
+  .host-item-arrow { color: var(--muted); font-size: .85rem; flex-shrink: 0; }
+
+  .modal-empty { text-align: center; padding: 44px 20px; color: var(--muted); font-size: .9rem; font-weight: 500; }
+
+  /* ── LEAFLET TOOLTIP ── */
+  .rp-tooltip {
+    background: rgba(26,33,80,.92) !important;
+    border: none !important;
+    border-radius: 8px !important;
+    color: #fff !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: .8rem !important;
+    font-weight: 600 !important;
+    padding: 6px 12px !important;
+    box-shadow: 0 4px 16px rgba(26,33,80,.25) !important;
+    white-space: nowrap;
+  }
+  .rp-tooltip::before { display: none !important; }
+
+  /* ── MAP POPUP CARD ── */
+  .rp-popup-card .leaflet-popup-content-wrapper,
+  .leaflet-popup-content-wrapper {
+    border-radius: 16px !important;
+    padding: 0 !important;
+    box-shadow: 0 8px 40px rgba(26,33,80,.18) !important;
+    border: 1.5px solid var(--border) !important;
+    overflow: hidden;
+    min-width: 260px;
+  }
+  /* Push popup well above the marker so route line stays visible */
+  .rp-popup-card {
+    margin-bottom: 28px !important;
+  }
+  .leaflet-popup { margin-bottom: 24px !important; }
+  .leaflet-popup-content { margin: 0 !important; width: auto !important; }
+  .leaflet-popup-tip-container { display: none !important; }
+  .leaflet-popup-close-button {
+    top: 10px !important; right: 10px !important;
+    color: var(--muted) !important; font-size: 18px !important;
+    z-index: 10; width: 26px !important; height: 26px !important;
+    line-height: 26px !important; text-align: center;
+    background: var(--card2) !important; border-radius: 50% !important;
+    border: 1px solid var(--border) !important;
+  }
+
+  .map-card {
+    background: #fff;
+    padding: 18px 20px 16px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    min-width: 260px;
+  }
+
+  .map-card-mode {
+    font-size: .68rem; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase;
+    margin-bottom: 8px; padding: 3px 10px;
+    border-radius: 20px; display: inline-block;
+  }
+
+  .map-card-mode.trainer { background: var(--accent-light); color: var(--accent); }
+  .map-card-mode.trainee { background: var(--accent2-light); color: var(--accent2); }
+
+  .map-card-name {
+    font-size: 1rem; font-weight: 800; color: var(--text);
+    margin-bottom: 3px;
+  }
+
+  .map-card-school {
+    font-size: .78rem; color: var(--text2); font-weight: 500;
+    margin-bottom: 12px; line-height: 1.4;
+  }
+
+  .map-card-meta { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+
+  .map-card-meta-row {
+    display: flex; align-items: center; gap: 7px;
+    font-size: .82rem; color: var(--text2); font-weight: 500;
+  }
+
+  .map-card-meta-row a { color: var(--accent); font-weight: 600; text-decoration: none; }
+
+  .map-card-dist {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--accent3-light); border: 1px solid rgba(230,119,0,.18);
+    border-radius: 20px; padding: 3px 10px;
+    font-size: .76rem; font-weight: 700;
+    color: var(--accent3); font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 12px;
+  }
+
+  .map-card-actions { display: flex; gap: 8px; border-top: 1.5px solid var(--border); padding-top: 12px; }
+
+  .map-btn-add {
+    flex: 1; padding: 7px 8px; border-radius: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: .76rem; font-weight: 600;
+    border: 1.5px solid; cursor: pointer; transition: all .15s;
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+  }
+
+  .map-btn-add.slot1 { border-color: rgba(59,91,219,.3); color: var(--accent); background: var(--accent-light); }
+  .map-btn-add.slot1:hover { background: rgba(59,91,219,.18); }
+  .map-btn-add.slot2 { border-color: rgba(230,119,0,.3); color: var(--accent3); background: var(--accent3-light); }
+  .map-btn-add.slot2:hover { background: rgba(230,119,0,.18); }
+  .map-btn-add.active-slot1 { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .map-btn-add.active-slot2 { background: var(--accent3); border-color: var(--accent3); color: #fff; }
+  .map-btn-add:disabled { opacity: .55; cursor: default; }
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+<div class="orb orb4"></div>
+
+<header>
+  <img id="cbse-logo"
+       src="https://www.cbse.gov.in/images/logo.png"
+       alt="CBSE Logo"
+       style="height:52px; width:auto; object-fit:contain; flex-shrink:0;"
+       onerror="this.replaceWith(document.getElementById('cbse-svg-fallback').content.cloneNode(true))" />
+  <!-- Fallback SVG if logo URL fails -->
+  <template id="cbse-svg-fallback">
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+      <circle cx="24" cy="24" r="23" fill="#003087" stroke="#FFD700" stroke-width="1.5"/>
+      <circle cx="24" cy="24" r="19" fill="none" stroke="#FFD700" stroke-width="1"/>
+      <g stroke="#FFD700" stroke-width="0.6" opacity="0.7">
+        <line x1="24" y1="7" x2="24" y2="41"/><line x1="7" y1="24" x2="41" y2="24"/>
+        <line x1="11.5" y1="11.5" x2="36.5" y2="36.5"/><line x1="36.5" y1="11.5" x2="11.5" y2="36.5"/>
+        <line x1="9" y1="18" x2="39" y2="30"/><line x1="9" y1="30" x2="39" y2="18"/>
+        <line x1="18" y1="9" x2="30" y2="39"/><line x1="30" y1="9" x2="18" y2="39"/>
+      </g>
+      <circle cx="24" cy="24" r="3.5" fill="#FFD700"/>
+      <circle cx="24" cy="24" r="2" fill="#003087"/>
+      <text x="24" y="46.5" text-anchor="middle" fill="#FFD700" font-size="5.5" font-family="Arial,sans-serif" font-weight="bold" letter-spacing="1">CBSE</text>
+    </svg>
+  </template>
+  <div>
+    <h1>Resource Person <span>Management System</span></h1>
+    <div class="header-sub">
+      Central Board of Secondary Education<br>
+      Centre of Excellence Bhopal
+    </div>
+  </div>
+  <div class="badge">Training Resource Portal</div>
+</header>
+
+<main>
+
+  <!-- RP DATABASE STATUS (auto-loaded from server) -->
+  <div class="section-title">Step 1 — RP Database</div>
+  <div class="upload-zone" id="upload-zone" style="cursor:default; pointer-events:none;">
+    <div class="upload-icon" id="rp-status-icon">⏳</div>
+    <h2 id="rp-status-title">Loading RP Database…</h2>
+    <p id="rp-status-desc">Fetching from secure server, please wait…</p>
+    <div id="loaded-info" style="display:none" class="loaded-info">✓ <span id="loaded-text"></span></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- HOST FILE UPLOAD -->
+  <div class="section-title">Step 2 — Upload Host Details File</div>
+  <div class="upload-zone" id="host-upload-zone">
+    <input type="file" class="file-input" id="file-input" accept=".xlsx,.xls" />
+    <div class="upload-icon">🏫</div>
+    <h2>Upload Host School Excel File</h2>
+    <p>Drop your Host Details .xlsx file here or click to browse</p>
+    <div id="host-loaded-info" style="display:none" class="loaded-info">✓ <span id="host-loaded-text"></span></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- REQUEST FORM -->
+  <div class="section-title">Step 3 — Training Request</div>
+  <div class="form-grid">
+    <div class="field">
+      <label>Host School</label>
+      <input type="text" id="host-school" placeholder="e.g. ABC Public School, Bhopal" />
+    </div>
+    <div class="field">
+      <label>Requested Topic Code</label>
+      <div class="select-wrapper">
+        <select id="topic-select">
+          <option value="">— Select or type topic —</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Host Latitude</label>
+      <input type="number" id="host-lat" placeholder="e.g. 22.207" step="any" />
+    </div>
+    <div class="field">
+      <label>Host Longitude</label>
+      <input type="number" id="host-lon" placeholder="e.g. 74.780" step="any" />
+    </div>
+  </div>
+  <div style="display:flex; gap:12px; flex-wrap:wrap;">
+    <button class="btn btn-primary" id="search-btn" onclick="runSearch()" disabled>
+      🔍 Find Resource Persons
+    </button>
+    <button class="btn btn-secondary" id="load-sheet2-btn" onclick="openHostModal()" style="display:none">
+      📋 Load from Sheet 2
+    </button>
+    <button class="btn btn-secondary" onclick="clearResults()">✕ Clear</button>
+  </div>
+
+  <!-- STATUS -->
+  <div style="margin-top:20px">
+    <div id="status-bar">
+      <div class="spinner"></div>
+      <span id="status-text">Searching...</span>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results">
+    <div id="host-banner" class="host-info" style="display:none">
+      <div class="host-icon">🏫</div>
+      <div>
+        <h3 id="result-host-name"></h3>
+        <p id="result-topic-name"></p>
+      </div>
+    </div>
+
+    <!-- SELECTION PANEL -->
+    <div id="selection-panel">
+      <div class="panel-title">Selected Resource Persons</div>
+      <div class="slots-row">
+        <div class="slot-box slot1-box" id="slot1-box">
+          <div class="slot-label">RP Slot 1</div>
+          <div id="slot1-content" class="slot-empty">Not selected</div>
+        </div>
+        <div class="slot-box slot2-box" id="slot2-box">
+          <div class="slot-label">RP Slot 2</div>
+          <div id="slot2-content" class="slot-empty">Not selected</div>
+        </div>
+        <button class="btn-save-excel" id="save-btn" onclick="saveToExcel()" disabled>
+          💾 Save to Excel
+        </button>
+      </div>
+    </div>
+
+    <!-- MAP RESULTS -->
+    <div id="map-legend" style="display:none; margin-bottom:12px; gap:20px; flex-wrap:wrap; align-items:center; background:rgba(255,255,255,.8); border:1.5px solid var(--border); border-radius:14px; padding:12px 20px; box-shadow:var(--shadow-sm);">
+      <span style="font-size:.8rem; font-weight:800; color:var(--text2); letter-spacing:.05em;">LEGEND</span>
+      <span style="display:flex;align-items:center;gap:7px;font-size:.82rem;font-weight:700;color:#c0392b;">
+        <svg width="14" height="19" viewBox="0 0 28 38"><path d="M14 1C6.8 1 1 6.8 1 14c0 10.5 13 23 13 23s13-12.5 13-23C27 6.8 21.2 1 14 1z" fill="#e74c3c" stroke="#c0392b" stroke-width="1.5"/><circle cx="14" cy="14" r="5" fill="white"/></svg>
+        Host School
+      </span>
+      <span style="display:flex;align-items:center;gap:7px;font-size:.82rem;font-weight:700;color:#27ae60;">
+        <svg width="14" height="19" viewBox="0 0 28 38"><path d="M14 1C6.8 1 1 6.8 1 14c0 10.5 13 23 13 23s13-12.5 13-23C27 6.8 21.2 1 14 1z" fill="#27ae60" stroke="#1e8449" stroke-width="1.5"/><circle cx="14" cy="14" r="5" fill="white"/></svg>
+        Trainer RP — Mode 1
+      </span>
+      <span style="display:flex;align-items:center;gap:7px;font-size:.82rem;font-weight:700;color:#2471a3;">
+        <svg width="14" height="19" viewBox="0 0 28 38"><path d="M14 1C6.8 1 1 6.8 1 14c0 10.5 13 23 13 23s13-12.5 13-23C27 6.8 21.2 1 14 1z" fill="#2980b9" stroke="#2471a3" stroke-width="1.5"/><circle cx="14" cy="14" r="5" fill="white"/></svg>
+        Trainee RP — Mode 2
+      </span>
+      <span style="font-size:.75rem;color:var(--muted);margin-left:auto;">🖱 Hover = distance line &nbsp;|&nbsp; Click = details card</span>
+    </div>
+    <div id="map-container" style="display:none; border-radius:18px; overflow:hidden; box-shadow:var(--shadow-lg); border:1.5px solid var(--border); margin-bottom:28px;">
+      <div id="rp-map" style="height:560px; width:100%;"></div>
+    </div>
+  </div>
+
+  <!-- DEVELOPER CREDIT -->
+  <div class="info-banner" style="justify-content:center; text-align:center; padding: 14px 22px;">
+    <div style="font-size:.82rem; color:var(--muted);">
+      Developed by <strong style="color:var(--text2);">Jai Chidar</strong>
+    </div>
+  </div>
+
+</main>
+
+<!-- HOST PICKER MODAL -->
+<div class="modal-overlay" id="host-modal" onclick="closeModalOnOverlay(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>📋 Select Host School</h3>
+      <button class="modal-close" onclick="closeHostModal()">✕</button>
+    </div>
+    <div class="modal-search">
+      <input type="text" id="modal-search" placeholder="Search school name or topic…" oninput="filterHostList()" />
+    </div>
+    <div class="modal-list" id="modal-list"></div>
+    <div class="modal-count" id="modal-count"></div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let rpData = [];
+let allTopics = new Set();
+let selectedSlots = { 1: null, 2: null };
+let currentWorkbook = null;
+let currentFileName = 'database.xlsx';
+let currentSheet2RowIndex = -1;
+
+// Persistent in-memory snapshot of sheet2 raw rows (header: 1 format)
+// This is the single source of truth — updated on every save, never re-read from wb
+let sheet2Snapshot = [];
+
+// Accumulates ALL host→RP assignments across the session
+// key = sheet2RowIndex, value = { rp1, rp2 }
+let pendingSelections = {};
+
+// ── RP DATABASE — AUTO LOAD FROM GOOGLE DRIVE ──
+const RP_DB_URL = 'https://docs.google.com/spreadsheets/d/1iVxd0XjDhlEo2ILBLcnPo__rKfnsN4Ub/export?format=xlsx';
+
+async function autoLoadRPDatabase() {
+  const icon  = document.getElementById('rp-status-icon');
+  const title = document.getElementById('rp-status-title');
+  const desc  = document.getElementById('rp-status-desc');
+  const zone  = document.getElementById('upload-zone');
+
+  try {
+    const res = await fetch(RP_DB_URL);
+    if (!res.ok) throw new Error('Network response was not ok');
+    const buffer = await res.arrayBuffer();
+    const wb = XLSX.read(buffer, { type: 'array' });
+    processRPSheet(wb.Sheets[wb.SheetNames[0]]);
+
+    // Success UI
+    zone.classList.add('loaded');
+    icon.textContent  = '✅';
+    title.textContent = 'RP Database Loaded';
+    desc.textContent  = 'Resource Person data loaded securely from server.';
+    document.getElementById('loaded-info').style.display = 'inline-flex';
+    document.getElementById('loaded-text').textContent =
+      `${rpData.length} RPs · ${allTopics.size} topics`;
+
+  } catch(err) {
+    icon.textContent  = '❌';
+    title.textContent = 'Failed to Load Database';
+    desc.textContent  = 'Could not connect to server. Check your internet connection and reload.';
+    zone.style.borderColor = 'var(--danger)';
+    console.error('RP DB load error:', err);
+  }
+}
+
+function processRPSheet(ws) {
+  const rawRows = XLSX.utils.sheet_to_json(ws);
+  const rpIndex = {};
+  allTopics.clear();
+
+  rawRows.forEach(r => {
+    const id = String(r.RP_ID || '').trim();
+    if (!id) return;
+    if (!rpIndex[id]) {
+      rpIndex[id] = {
+        RP_ID:         id,
+        RP_Name:       r.RP_Name      || r['RP Name'] || '',
+        Mobile:        r.Mobile       || '',
+        Email:         r.Email        || '',
+        designation:   r.designation  || r.Designation || '',
+        school_code:   r.school_code  || '',
+        School_name:   r.School_name  || '',
+        dist:          r.dist         || '',
+        latitude:      r.latitude     || '',
+        longitude:     r.longitude    || '',
+        trainerTopics: new Set(),
+        traineeTopics: new Set(),
+      };
+    }
+    const code = String(r['TOPIC CODE'] || '').replace(/\s/g,'').toUpperCase();
+    const type = String(r['TYPE'] || '').trim().toLowerCase();
+    if (!code) return;
+    if (type === 'trainer') { rpIndex[id].trainerTopics.add(code); allTopics.add(code); }
+    else if (type === 'trainee') { rpIndex[id].traineeTopics.add(code); allTopics.add(code); }
+  });
+
+  rpData = Object.values(rpIndex);
+
+  // Populate topic dropdown
+  const topicNames = {};
+  rawRows.forEach(r => {
+    const code = String(r['TOPIC CODE'] || '').replace(/\s/g,'').toUpperCase();
+    const name = String(r['TOPIC NAME'] || '').trim();
+    if (code && name && !topicNames[code]) topicNames[code] = name;
+  });
+  const sel = document.getElementById('topic-select');
+  sel.innerHTML = '<option value="">— Select topic —</option>';
+  [...allTopics].sort().forEach(code => {
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = topicNames[code] ? `${code} — ${topicNames[code]}` : code;
+    sel.appendChild(opt);
+  });
+
+  document.getElementById('search-btn').disabled = false;
+}
+
+// Start auto-loading immediately
+autoLoadRPDatabase();
+
+// ── HOST FILE UPLOAD ──
+const fileInput      = document.getElementById('file-input');
+const hostUploadZone = document.getElementById('host-upload-zone');
+
+hostUploadZone.addEventListener('dragover', e => { e.preventDefault(); hostUploadZone.classList.add('drag-over'); });
+hostUploadZone.addEventListener('dragleave', () => hostUploadZone.classList.remove('drag-over'));
+hostUploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  hostUploadZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) { currentFileName = file.name; processHostFile(file); }
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) { currentFileName = fileInput.files[0].name; processHostFile(fileInput.files[0]); }
+});
+
+function processHostFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      currentWorkbook = wb;
+
+      // Read Sheet 1 of host file as host details
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      window._sheet2      = XLSX.utils.sheet_to_json(ws);
+      sheet2Snapshot      = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+      hostUploadZone.classList.add('loaded');
+      document.getElementById('host-loaded-info').style.display = 'inline-flex';
+      document.getElementById('host-loaded-text').textContent =
+        `${window._sheet2.length} host school${window._sheet2.length !== 1 ? 's' : ''} loaded`;
+      document.getElementById('load-sheet2-btn').style.display = 'inline-flex';
+      fileInput.value = '';
+    } catch(err) {
+      alert('Error reading host file: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── HOST MODAL ──
+function openHostModal() {
+  if (!window._sheet2 || !window._sheet2.length) return;
+  document.getElementById('modal-search').value = '';
+  filterHostList();
+  document.getElementById('host-modal').classList.add('open');
+  setTimeout(() => document.getElementById('modal-search').focus(), 100);
+}
+
+function closeHostModal() {
+  document.getElementById('host-modal').classList.remove('open');
+}
+
+function closeModalOnOverlay(e) {
+  if (e.target === document.getElementById('host-modal')) closeHostModal();
+}
+
+function filterHostList() {
+  const q = document.getElementById('modal-search').value.toLowerCase();
+  const list = document.getElementById('modal-list');
+  const rows = window._sheet2 || [];
+
+  const filtered = rows.map((row, idx) => ({ row, idx })).filter(({ row }) => {
+    const name = String(row.Host_School || '').toLowerCase();
+    const topic = String(row.Requested_Topic || '').toLowerCase();
+    return !q || name.includes(q) || topic.includes(q);
+  });
+
+  document.getElementById('modal-count').textContent =
+    `${filtered.length} of ${rows.length} request${rows.length !== 1 ? 's' : ''}`;
+
+  if (!filtered.length) {
+    list.innerHTML = '<div class="modal-empty">No matching schools found</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  filtered.forEach(({ row, idx }) => {
+    const item = document.createElement('div');
+    item.className = 'host-item';
+    // Show tick if this is the currently active row
+    const isActive = idx === currentSheet2RowIndex;
+    const hasPending = pendingSelections[idx] && (pendingSelections[idx].rp1 || pendingSelections[idx].rp2);
+    item.innerHTML = `
+      <div class="host-item-icon">${isActive ? '▶' : hasPending ? '✓' : '🏫'}</div>
+      <div class="host-item-body">
+        <div class="host-item-name">${row.Host_School || '(unnamed)'}</div>
+        <div class="host-item-meta">
+          <span class="host-topic-badge">${row.Requested_Topic || '—'}</span>
+          ${hasPending ? `<span style="color:var(--accent2);font-size:.72rem;">RPs assigned</span>` : ''}
+          ${row.latitude ? `<span>📍 ${Number(row.latitude).toFixed(4)}, ${Number(row.longitude).toFixed(4)}</span>` : ''}
+        </div>
+      </div>
+      <div class="host-item-arrow">→</div>
+    `;
+    if (isActive) item.style.background = 'rgba(79,142,247,.06)';
+    item.addEventListener('click', () => selectHost(row, idx));
+    list.appendChild(item);
+  });
+}
+
+function selectHost(row, idx) {
+  currentSheet2RowIndex = idx;
+  closeHostModal();
+
+  // Restore previously saved slots for this host (if any)
+  const prev = pendingSelections[idx] || { rp1: null, rp2: null };
+  selectedSlots = { 1: prev.rp1 || null, 2: prev.rp2 || null };
+  updatePanel();
+
+  // Fill form fields
+  if (row.Host_School) document.getElementById('host-school').value = row.Host_School;
+  if (row.Requested_Topic) document.getElementById('topic-select').value = String(row.Requested_Topic).trim();
+  if (row.latitude) document.getElementById('host-lat').value = row.latitude;
+  if (row.longitude) document.getElementById('host-lon').value = row.longitude;
+
+  // Auto-run search
+  runSearch();
+}
+
+// legacy alias (unused but safe to keep)
+function loadFromSheet2() { openHostModal(); }
+
+// ── HAVERSINE ──
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const toR = x => x * Math.PI / 180;
+  const dLat = toR(lat2 - lat1);
+  const dLon = toR(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toR(lat1)) * Math.cos(toR(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+
+// ── SEARCH ──
+function runSearch() {
+  const hostSchool = document.getElementById('host-school').value.trim();
+  const topic = document.getElementById('topic-select').value.trim();
+  const lat = parseFloat(document.getElementById('host-lat').value);
+  const lon = parseFloat(document.getElementById('host-lon').value);
+
+  if (!topic) { alert('Please select a topic.'); return; }
+  if (!hostSchool) { alert('Please enter the host school name.'); return; }
+  if (isNaN(lat) || isNaN(lon)) { alert('Please enter valid coordinates.'); return; }
+  if (!rpData.length) { alert('Please load the database first.'); return; }
+
+  // Reset slots only if this is a manual search (not from host picker)
+  if (currentSheet2RowIndex < 0) {
+    selectedSlots = { 1: null, 2: null };
+    updatePanel();
+  }
+
+  showStatus('Calculating distances and filtering RPs…');
+
+  setTimeout(() => {
+    const selectedIds = new Set();
+
+    const trainerResults = processMode('trainer', lat, lon, hostSchool, topic, selectedIds, 6, 25);
+    trainerResults.forEach(r => selectedIds.add(String(r.RP_ID)));
+
+    const traineeResults = processMode('trainee', lat, lon, hostSchool, topic, selectedIds, 6, 25);
+
+    renderResults(trainerResults, traineeResults, hostSchool, topic);
+    hideStatus();
+  }, 100);
+}
+
+function processMode(type, hostLat, hostLon, hostSchool, topic, excludeIds, maxResults, shortlist) {
+  // type = 'trainer' or 'trainee'
+  const topicClean = String(topic).replace(/\s/g, '').toUpperCase();
+  const topicSet = type === 'trainer' ? 'trainerTopics' : 'traineeTopics';
+
+  let filtered = rpData.filter(r => {
+    const hasTopicAsType  = r[topicSet] && r[topicSet].has(topicClean);
+    const notHost         = String(r.School_name || '').trim().toUpperCase() !== hostSchool.trim().toUpperCase();
+    const notExcluded     = !excludeIds.has(String(r.RP_ID));
+    return hasTopicAsType && notHost && notExcluded;
+  });
+
+  if (!filtered.length) return [];
+
+  filtered = filtered.map(r => ({
+    ...r,
+    airDist: haversine(hostLat, hostLon, parseFloat(r.latitude), parseFloat(r.longitude))
+  }));
+
+  filtered.sort((a, b) => a.airDist - b.airDist);
+  const shortlisted = filtered.slice(0, shortlist);
+  shortlisted.forEach(r => r.roadDist = r.airDist * 1.3);
+  shortlisted.sort((a, b) => a.roadDist - b.roadDist);
+  return shortlisted.slice(0, maxResults);
+}
+
+// ── SLOT SELECTION ──
+function assignSlot(rp, slot) {
+  const otherSlot = slot === 1 ? 2 : 1;
+  if (selectedSlots[otherSlot] && selectedSlots[otherSlot].RP_ID === rp.RP_ID) {
+    selectedSlots[otherSlot] = null;
+  }
+  selectedSlots[slot] = rp;
+
+  // Immediately persist to pendingSelections for this host
+  if (currentSheet2RowIndex >= 0) {
+    if (!pendingSelections[currentSheet2RowIndex]) pendingSelections[currentSheet2RowIndex] = { rp1: null, rp2: null };
+    pendingSelections[currentSheet2RowIndex][`rp${slot}`] = rp;
+    if (selectedSlots[otherSlot] === null) pendingSelections[currentSheet2RowIndex][`rp${otherSlot}`] = null;
+  }
+
+  updatePanel();
+  refreshAllCardButtons();
+}
+
+function clearSlot(slot) {
+  selectedSlots[slot] = null;
+
+  if (currentSheet2RowIndex >= 0 && pendingSelections[currentSheet2RowIndex]) {
+    pendingSelections[currentSheet2RowIndex][`rp${slot}`] = null;
+  }
+
+  updatePanel();
+  refreshAllCardButtons();
+}
+
+function updatePanel() {
+  const panel = document.getElementById('selection-panel');
+  panel.classList.add('visible');
+
+  // Slot 1
+  const s1box = document.getElementById('slot1-box');
+  const s1 = selectedSlots[1];
+  if (s1) {
+    s1box.classList.add('filled');
+    document.getElementById('slot1-content').innerHTML = `
+      <button class="btn-clear-slot" onclick="clearSlot(1)" title="Remove">✕</button>
+      <div class="slot-name">${s1.RP_Name || '—'}</div>
+      <div class="slot-school">${s1.School_name || ''}${s1.dist ? ' · '+s1.dist : ''} · 📱 ${s1.Mobile || ''}</div>
+    `;
+  } else {
+    s1box.classList.remove('filled');
+    document.getElementById('slot1-content').innerHTML = '<div class="slot-empty">Not selected</div>';
+  }
+
+  // Slot 2
+  const s2box = document.getElementById('slot2-box');
+  const s2 = selectedSlots[2];
+  if (s2) {
+    s2box.classList.add('filled');
+    document.getElementById('slot2-content').innerHTML = `
+      <button class="btn-clear-slot" onclick="clearSlot(2)" title="Remove">✕</button>
+      <div class="slot-name">${s2.RP_Name || '—'}</div>
+      <div class="slot-school">${s2.School_name || ''}${s2.dist ? ' · '+s2.dist : ''} · 📱 ${s2.Mobile || ''}</div>
+    `;
+  } else {
+    s2box.classList.remove('filled');
+    document.getElementById('slot2-content').innerHTML = '<div class="slot-empty">Not selected</div>';
+  }
+
+  // Enable save if any host has selections
+  const hasAnyPending = Object.values(pendingSelections).some(s => s.rp1 || s.rp2);
+  document.getElementById('save-btn').disabled = !(s1 || s2 || hasAnyPending);
+
+  // Update save button label to show total pending count
+  const pendingCount = Object.keys(pendingSelections).length;
+  const saveBtn = document.getElementById('save-btn');
+  if (pendingCount > 1) {
+    saveBtn.innerHTML = `💾 Save All (${pendingCount} hosts)`;
+  } else {
+    saveBtn.innerHTML = `💾 Save to Excel`;
+  }
+}
+
+function refreshAllCardButtons() {
+  // Refresh any open popup buttons on the map
+  if (!window.__rpMap) return;
+  Object.keys(window.__rpMap).forEach(rpId => {
+    rebuildPopup(rpId, 0, '');
+  });
+}
+
+// ── MAP STATE ──
+let leafletMap = null;
+let hoverLine = null;
+let allMarkers = [];
+
+// ── RENDER ──
+function renderResults(trainers, trainees, hostSchool, topic) {
+  const results = document.getElementById('results');
+  results.classList.add('visible');
+
+  document.getElementById('host-banner').style.display = 'flex';
+  document.getElementById('result-host-name').textContent = hostSchool;
+  document.getElementById('result-topic-name').textContent = `Requested Topic: ${topic}`;
+
+  const lat  = parseFloat(document.getElementById('host-lat').value);
+  const lon  = parseFloat(document.getElementById('host-lon').value);
+
+  // Show map elements
+  const mapContainer = document.getElementById('map-container');
+  const mapLegend    = document.getElementById('map-legend');
+  mapContainer.style.display = 'block';
+  mapLegend.style.display    = 'flex';
+
+  // Destroy previous map instance fully
+  if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+  hoverLine = null;
+  window._clickLine = null;
+  allMarkers = [];
+  window.__rpMap = {};
+
+  // Small delay so DOM is ready before Leaflet init
+  setTimeout(() => {
+    leafletMap = L.map('rp-map', {
+      zoomControl: true,
+      scrollWheelZoom: true,
+      attributionControl: true
+    });
+
+    // ── Base tile layers ──
+    const baseLayers = {
+      street: L.tileLayer('https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=yo6to9GhseERdvdbrqS5yTfgbi6wYdWE', {
+        attribution: '© <a href="https://www.tomtom.com">TomTom</a>',
+        maxZoom: 22
+      }),
+      satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '© Esri, Maxar, Earthstar Geographics',
+        maxZoom: 19
+      }),
+      terrain: L.tileLayer('https://api.tomtom.com/map/1/tile/basic/night/{z}/{x}/{y}.png?key=yo6to9GhseERdvdbrqS5yTfgbi6wYdWE', {
+        attribution: '© <a href="https://www.tomtom.com">TomTom</a>',
+        maxZoom: 22
+      }),
+      traffic: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19,
+        opacity: 1
+      })
+    };
+
+    // Start with street view
+    baseLayers.street.addTo(leafletMap);
+
+    // Traffic overlay (HERE Maps free traffic layer)
+    const trafficOverlay = L.tileLayer(
+      'https://{s}.maps.ls.hereapi.com/maptile/2.1/flowtile/newest/normal.day/{z}/{x}/{y}/256/png8?apiKey=free',
+      { opacity: 0.7, maxZoom: 18 }
+    );
+
+    // ── Custom layer switcher ──
+    let activeLayer = 'street';
+    let trafficOn = false;
+
+    const switcherEl = document.createElement('div');
+    switcherEl.id = 'map-layer-switcher';
+    switcherEl.style.cssText = `
+      position:absolute; bottom:32px; left:12px; z-index:1000;
+      display:flex; gap:6px; flex-wrap:wrap;
+      background:rgba(255,255,255,0.96); border-radius:12px;
+      padding:8px 10px; box-shadow:0 2px 16px rgba(26,33,80,.18);
+      border:1px solid rgba(59,91,219,.12);
+    `;
+
+    const layerBtns = [
+      { key: 'street',    label: '🗺 Street',    layer: baseLayers.street },
+      { key: 'satellite', label: '🛰 Satellite', layer: baseLayers.satellite },
+      { key: 'terrain',   label: '🌙 Night',     layer: baseLayers.terrain },
+    ];
+
+    function refreshSwitcher() {
+      switcherEl.querySelectorAll('.lyr-btn').forEach(b => {
+        const active = b.dataset.key === activeLayer;
+        b.style.background = active ? 'var(--accent)' : 'transparent';
+        b.style.color = active ? '#fff' : 'var(--text2)';
+        b.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+        b.style.fontWeight = active ? '700' : '500';
+      });
+      const tb = switcherEl.querySelector('.traffic-btn');
+      if (tb) {
+        tb.style.background = trafficOn ? '#e67700' : 'transparent';
+        tb.style.color = trafficOn ? '#fff' : 'var(--text2)';
+        tb.style.borderColor = trafficOn ? '#e67700' : 'var(--border)';
+        tb.style.fontWeight = trafficOn ? '700' : '500';
+      }
+    }
+
+    layerBtns.forEach(({ key, label, layer }) => {
+      const btn = document.createElement('button');
+      btn.className = 'lyr-btn';
+      btn.dataset.key = key;
+      btn.textContent = label;
+      btn.style.cssText = `
+        padding:5px 12px; border-radius:8px; border:1.5px solid var(--border);
+        font-family:'Plus Jakarta Sans',sans-serif; font-size:.76rem;
+        cursor:pointer; transition:all .15s; background:transparent;
+        color:var(--text2); white-space:nowrap;
+      `;
+      btn.onclick = () => {
+        if (activeLayer === key) return;
+        leafletMap.removeLayer(baseLayers[activeLayer]);
+        leafletMap.addLayer(layer);
+        activeLayer = key;
+        refreshSwitcher();
+      };
+      switcherEl.appendChild(btn);
+    });
+
+    // Traffic toggle button
+    const trafficBtn = document.createElement('button');
+    trafficBtn.className = 'traffic-btn lyr-btn';
+    trafficBtn.textContent = '🚦 Traffic';
+    trafficBtn.style.cssText = `
+      padding:5px 12px; border-radius:8px; border:1.5px solid var(--border);
+      font-family:'Plus Jakarta Sans',sans-serif; font-size:.76rem;
+      cursor:pointer; transition:all .15s; background:transparent;
+      color:var(--text2); white-space:nowrap;
+    `;
+    trafficBtn.onclick = () => {
+      trafficOn = !trafficOn;
+      if (trafficOn) {
+        // Use OSM with a traffic-style overlay from Thunderforest (free)
+        // Switch base to a traffic-aware tile
+        leafletMap.removeLayer(baseLayers[activeLayer]);
+        baseLayers.traffic = L.tileLayer(
+          'https://api.tomtom.com/map/1/tile/basic/main/{z}/{x}/{y}.png?key=yo6to9GhseERdvdbrqS5yTfgbi6wYdWE',
+          { attribution: '© TomTom', maxZoom: 22 }
+        );
+        const trafficFlowLayer = L.tileLayer(
+          'https://api.tomtom.com/traffic/map/4/tile/flow/relative0/{z}/{x}/{y}.png?key=yo6to9GhseERdvdbrqS5yTfgbi6wYdWE',
+          { attribution: '© TomTom Traffic', maxZoom: 22, opacity: 0.8 }
+        );
+        baseLayers.traffic.addTo(leafletMap);
+        trafficFlowLayer.addTo(leafletMap);
+        baseLayers._trafficFlow = trafficFlowLayer;
+        activeLayer = 'traffic';
+        // Add traffic label button
+        layerBtns.push({ key: 'traffic', label: '🚦 Traffic', layer: baseLayers.traffic });
+      } else {
+        leafletMap.removeLayer(baseLayers.traffic);
+        if (baseLayers._trafficFlow) { leafletMap.removeLayer(baseLayers._trafficFlow); baseLayers._trafficFlow = null; }
+        baseLayers.street.addTo(leafletMap);
+        activeLayer = 'street';
+        layerBtns.pop();
+      }
+      refreshSwitcher();
+    };
+    switcherEl.appendChild(trafficBtn);
+
+    document.getElementById('rp-map').appendChild(switcherEl);
+    refreshSwitcher();
+
+    // ── Custom pin icon factory ──
+    function makeIcon(color, rimColor, sz) {
+      sz = sz || 32;
+      const h = Math.round(sz * 1.4);
+      const uid = 'sh_' + color.replace('#','') + sz;
+      return L.divIcon({
+        className: '',
+        iconSize:    [sz, h],
+        iconAnchor:  [sz/2, h],
+        popupAnchor: [0, -(h + 20)],
+        html: `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${h}" viewBox="0 0 32 45">
+          <defs>
+            <filter id="${uid}" x="-30%" y="-20%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="rgba(0,0,0,0.28)"/>
+            </filter>
+          </defs>
+          <path d="M16 1C8.27 1 2 7.27 2 15c0 11.25 14 29 14 29s14-17.75 14-29C30 7.27 23.73 1 16 1z"
+            fill="${color}" stroke="${rimColor}" stroke-width="1.8" filter="url(#${uid})"/>
+          <circle cx="16" cy="15" r="6" fill="white" opacity="0.92"/>
+          <circle cx="16" cy="15" r="3" fill="${color}" opacity="0.55"/>
+        </svg>`
+      });
+    }
+
+    const hostIcon    = makeIcon('#e74c3c', '#922b21', 40);
+    const trainerIcon = makeIcon('#1e8449', '#145a32', 32);
+    const traineeIcon = makeIcon('#1a5276', '#154360', 32);
+
+    // ── Host marker ──
+    L.marker([lat, lon], { icon: hostIcon, zIndexOffset: 2000 })
+      .addTo(leafletMap)
+      .bindPopup(`
+        <div class="map-card">
+          <div class="map-card-name">🏫 ${hostSchool}</div>
+          <div class="map-card-school" style="color:#e74c3c;font-weight:700;">Host School · Origin</div>
+          <div class="map-card-dist" style="background:#fdecea;border-color:rgba(231,76,60,.2);color:#c0392b;">📍 0 km</div>
+        </div>`);
+
+    allMarkers.push([lat, lon]);
+
+    // ── Road routing — TomTom Routing API ──
+    const routeCache = {};
+
+    async function fetchRoute(fromLat, fromLon, toLat, toLon) {
+      const key = `${fromLat.toFixed(5)},${fromLon.toFixed(5)}|${toLat.toFixed(5)},${toLon.toFixed(5)}`;
+      if (routeCache[key]) return routeCache[key];
+
+      // Provider 1: TomTom Routing API
+      try {
+        const url = `https://api.tomtom.com/routing/1/calculateRoute/${fromLat},${fromLon}:${toLat},${toLon}/json?key=yo6to9GhseERdvdbrqS5yTfgbi6wYdWE&routeType=fastest&travelMode=car&traffic=true`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.routes?.[0]?.legs?.[0]?.points) {
+          const coords = data.routes[0].legs[0].points.map(p => [p.latitude, p.longitude]);
+          routeCache[key] = coords;
+          return coords;
+        }
+      } catch(e) {}
+
+      // Provider 2: OSRM fallback
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${fromLon},${fromLat};${toLon},${toLat}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.code === 'Ok' && data.routes?.[0]) {
+          const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+          routeCache[key] = coords;
+          return coords;
+        }
+      } catch(e) {}
+
+      // Final fallback: straight line
+      console.warn('All routing providers failed — showing straight line');
+      const fallback = [[fromLat, fromLon], [toLat, toLon]];
+      routeCache[key] = fallback;
+      return fallback;
+    }
+
+    // Pre-fetch routes in background so hover is instant
+    function prefetchRoutes(rpList) {
+      rpList.forEach(rp => {
+        const rpLat = parseFloat(rp.latitude);
+        const rpLon = parseFloat(rp.longitude);
+        if (!isNaN(rpLat) && !isNaN(rpLon)) fetchRoute(lat, lon, rpLat, rpLon);
+      });
+    }
+
+    // ── RP marker adder ──
+    function addRPMarkers(rpList, icon, color, mode) {
+      rpList.forEach((rp, i) => {
+        const rpLat = parseFloat(rp.latitude);
+        const rpLon = parseFloat(rp.longitude);
+        if (isNaN(rpLat) || isNaN(rpLon)) return;
+
+        allMarkers.push([rpLat, rpLon]);
+        window.__rpMap[rp.RP_ID] = rp;
+
+        const marker = L.marker([rpLat, rpLon], {
+          icon,
+          zIndexOffset: mode === 'trainer' ? 1000 : 900
+        }).addTo(leafletMap);
+
+        // Track hover state with a token to cancel stale async draws
+        let hoverToken = 0;
+
+        // HOVER → road route (dashed)
+        marker.on('mouseover', async () => {
+          // Remove any existing hover line
+          if (hoverLine) { leafletMap.removeLayer(hoverLine); hoverLine = null; }
+          marker.openTooltip();
+
+          const myToken = ++hoverToken;
+          const coords = await fetchRoute(lat, lon, rpLat, rpLon);
+
+          // Only draw if this hover is still active (token unchanged) and map exists
+          if (myToken === hoverToken && leafletMap) {
+            hoverLine = L.polyline(coords, {
+              color, weight: 5, opacity: 0.78,
+              dashArray: '12 8',
+              lineJoin: 'round', lineCap: 'round'
+            }).addTo(leafletMap);
+          }
+        });
+
+        marker.on('mouseout', () => {
+          hoverToken++; // cancel any in-flight hover fetch
+          if (hoverLine) { leafletMap.removeLayer(hoverLine); hoverLine = null; }
+          marker.closeTooltip();
+        });
+
+        // Tooltip showing name + distance on hover
+        marker.bindTooltip(
+          `<b>${rp.RP_Name}</b><br>~${rp.roadDist.toFixed(1)} km road distance`,
+          { permanent: false, direction: 'top', className: 'rp-tooltip' }
+        );
+
+        // CLICK → solid road route + popup card
+        marker.on('click', async () => {
+          hoverToken++; // cancel hover fetch
+          if (hoverLine) { leafletMap.removeLayer(hoverLine); hoverLine = null; }
+          if (window._clickLine) { leafletMap.removeLayer(window._clickLine); window._clickLine = null; }
+
+          // Show popup offset to the right so it doesn't cover the route line
+          // Calculate an offset point slightly east of the RP marker
+          const popupLat = rpLat + 0.003;
+          const popupLon = rpLon + (rpLon > lon ? 0.01 : -0.01); // side away from host
+
+          L.popup({
+            maxWidth: 310, minWidth: 270, closeButton: true,
+            offset: L.point(0, 0),
+            autoPan: true,
+            autoPanPaddingTopLeft: L.point(20, 80),
+            autoPanPaddingBottomRight: L.point(20, 20),
+            className: 'rp-popup-card'
+          })
+            .setLatLng([rpLat, rpLon])
+            .setContent(buildPopupHTML(rp, i + 1, mode))
+            .openOn(leafletMap);
+
+          // Fetch route (likely cached from prefetch) and draw solid line
+          const coords = await fetchRoute(lat, lon, rpLat, rpLon);
+          if (leafletMap) {
+            if (window._clickLine) leafletMap.removeLayer(window._clickLine);
+            window._clickLine = L.polyline(coords, {
+              color, weight: 6, opacity: 0.92,
+              lineJoin: 'round', lineCap: 'round'
+            }).addTo(leafletMap);
+            window._clickLine.bringToFront();
+          }
+        });
+      });
+    }
+
+    addRPMarkers(trainers, trainerIcon, '#27ae60', 'trainer');
+    addRPMarkers(trainees, traineeIcon, '#2980b9', 'trainee');
+
+    // Pre-fetch all routes in background so hover feels instant
+    setTimeout(() => {
+      prefetchRoutes([...trainers, ...trainees]);
+    }, 500);
+
+    // Fit bounds
+    if (allMarkers.length > 1) {
+      leafletMap.fitBounds(L.latLngBounds(allMarkers), { padding: [50, 50], maxZoom: 13 });
+    } else {
+      leafletMap.setView([lat, lon], 9);
+    }
+
+    // Remove click line when popup closes
+    leafletMap.on('popupclose', () => {
+      if (window._clickLine) { leafletMap.removeLayer(window._clickLine); window._clickLine = null; }
+    });
+
+    // Force size recalculation after reveal
+    leafletMap.invalidateSize();
+  }, 80);
+
+  results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function buildPopupHTML(rp, rank, mode) {
+  const inSlot1 = selectedSlots[1] && selectedSlots[1].RP_ID == rp.RP_ID;
+  const inSlot2 = selectedSlots[2] && selectedSlots[2].RP_ID == rp.RP_ID;
+  const modeLabel = mode === 'trainer' ? 'Trainer — Mode 1' : 'Trainee — Mode 2';
+
+  return `<div class="map-card">
+    <div>
+      <span class="map-card-mode ${mode}">${modeLabel}</span>
+    </div>
+    <div class="map-card-name">#${rank} ${rp.RP_Name || '—'}</div>
+    <div class="map-card-school">${rp.School_name || '—'}${rp.dist ? ' · ' + rp.dist : ''}</div>
+    <div class="map-card-meta">
+      <div class="map-card-meta-row">📱 <a href="tel:${rp.Mobile}">${rp.Mobile || '—'}</a></div>
+      ${rp.Email ? `<div class="map-card-meta-row">✉️ <a href="mailto:${rp.Email}">${rp.Email}</a></div>` : ''}
+      ${rp.designation ? `<div class="map-card-meta-row">🎓 ${rp.designation}</div>` : ''}
+    </div>
+    <div class="map-card-dist">📍 ~${rp.roadDist.toFixed(1)} km (est.)</div>
+    <div class="map-card-actions">
+      <button class="map-btn-add slot1 ${inSlot1 ? 'active-slot1' : ''}"
+        id="popup-btn1-${rp.RP_ID}" ${inSlot1 ? 'disabled' : ''}
+        onclick="assignSlot(window.__rpMap['${rp.RP_ID}'], 1); rebuildPopup('${rp.RP_ID}', ${rank}, '${mode}')">
+        ${inSlot1 ? '✓ RP 1' : '＋ RP 1'}
+      </button>
+      <button class="map-btn-add slot2 ${inSlot2 ? 'active-slot2' : ''}"
+        id="popup-btn2-${rp.RP_ID}" ${inSlot2 ? 'disabled' : ''}
+        onclick="assignSlot(window.__rpMap['${rp.RP_ID}'], 2); rebuildPopup('${rp.RP_ID}', ${rank}, '${mode}')">
+        ${inSlot2 ? '✓ RP 2' : '＋ RP 2'}
+      </button>
+    </div>
+  </div>`;
+}
+
+function bindPopupButtons(rp) {
+  // nothing extra needed — onclick is inline
+}
+
+function rebuildPopup(rpId, rank, mode) {
+  // After assigning slot, refresh all open popup button states
+  const rp = window.__rpMap[rpId];
+  if (!rp) return;
+  // Close and reopen won't work nicely; just update button text directly
+  const btn1 = document.getElementById(`popup-btn1-${rpId}`);
+  const btn2 = document.getElementById(`popup-btn2-${rpId}`);
+  if (btn1) {
+    const inSlot1 = selectedSlots[1] && selectedSlots[1].RP_ID == rpId;
+    btn1.className = `map-btn-add slot1 ${inSlot1 ? 'active-slot1' : ''}`;
+    btn1.textContent = inSlot1 ? '✓ RP 1' : '＋ RP 1';
+    btn1.disabled = inSlot1;
+  }
+  if (btn2) {
+    const inSlot2 = selectedSlots[2] && selectedSlots[2].RP_ID == rpId;
+    btn2.className = `map-btn-add slot2 ${inSlot2 ? 'active-slot2' : ''}`;
+    btn2.textContent = inSlot2 ? '✓ RP 2' : '＋ RP 2';
+    btn2.disabled = inSlot2;
+  }
+}
+
+function makeCard(rp, rank, mode) { return document.createElement('div'); } // legacy stub
+
+function makeEmpty(msg) {
+  const d = document.createElement('div');
+  d.className = 'empty';
+  d.style.gridColumn = '1/-1';
+  d.innerHTML = `<div class="empty-icon">🔍</div><p>${msg}</p>`;
+  return d;
+}
+
+// ── EXCEL SAVE ──
+function saveToExcel() {
+  if (!currentWorkbook) { alert('No workbook loaded.'); return; }
+  const sourceRows = window._sheet2 || [];
+  if (!sourceRows.length) { alert('Sheet 2 data not found.'); return; }
+
+  const wb = currentWorkbook;
+  const sheetName = wb.SheetNames[1] || 'Sheet2';
+
+  // Build complete header list: all original columns + RP assignment columns
+  const originalHeaders = sheet2Snapshot.length ? [...sheet2Snapshot[0]] : Object.keys(sourceRows[0] || {});
+  const requiredCols = [
+    'RP_ID1','RP_Name1','Mobile1','Email1','Designation1','school_code1','School_name1','dist1','RPDistance1',
+    'RP_ID2','RP_Name2','Mobile2','Email2','Designation2','school_code2','School_name2','dist2','RPDistance2'
+  ];
+  const allHeaders = [...originalHeaders];
+  requiredCols.forEach(col => { if (!allHeaders.includes(col)) allHeaders.push(col); });
+
+  // Rebuild output row-by-row from the original JSON source
+  // This guarantees ALL rows (1 to N) are present — no sparse array gaps
+  const outputRows = [allHeaders];
+
+  sourceRows.forEach((srcRow, idx) => {
+    // Fill each cell from source JSON by column name
+    const row = allHeaders.map(h => {
+      const v = srcRow[h];
+      return (v !== undefined && v !== null) ? v : '';
+    });
+
+    // Overlay RP assignments for this host row if any
+    const slots = pendingSelections[idx];
+    if (slots) {
+      const writeRP = (rp, suffix) => {
+        if (!rp) return;
+        const fields = {
+          [`RP_ID${suffix}`]:        rp.RP_ID       || '',
+          [`RP_Name${suffix}`]:      rp.RP_Name     || '',
+          [`Mobile${suffix}`]:       rp.Mobile      || '',
+          [`Email${suffix}`]:        rp.Email       || '',
+          [`Designation${suffix}`]:  rp.designation || '',
+          [`school_code${suffix}`]:  rp.school_code || '',
+          [`School_name${suffix}`]:  rp.School_name || '',
+          [`dist${suffix}`]:         rp.dist        || '',
+          [`RPDistance${suffix}`]:   rp.roadDist ? rp.roadDist.toFixed(2) : '',
+        };
+        Object.entries(fields).forEach(([col, val]) => {
+          const i = allHeaders.indexOf(col);
+          if (i >= 0) row[i] = val;
+        });
+      };
+      writeRP(slots.rp1, '1');
+      writeRP(slots.rp2, '2');
+    }
+
+    outputRows.push(row);
+  });
+
+  // Write to workbook and download
+  const newWs = XLSX.utils.aoa_to_sheet(outputRows);
+  wb.Sheets[sheetName] = newWs;
+  sheet2Snapshot = outputRows; // keep in sync
+
+  XLSX.writeFile(wb, currentFileName.replace(/\.xlsx$/i, '') + '_updated.xlsx');
+
+  // Visual feedback
+  const btn = document.getElementById('save-btn');
+  const savedCount = Object.keys(pendingSelections).length;
+  const prev = btn.innerHTML;
+  btn.innerHTML = `✓ ${savedCount} host${savedCount !== 1 ? 's' : ''} saved!`;
+  btn.style.background = 'linear-gradient(135deg,#4f8ef7,#7c5af7)';
+  setTimeout(() => { btn.innerHTML = prev; btn.style.background = ''; }, 2200);
+}
+
+function showStatus(msg) {
+  const bar = document.getElementById('status-bar');
+  document.getElementById('status-text').textContent = msg;
+  bar.classList.add('visible');
+}
+
+function hideStatus() {
+  document.getElementById('status-bar').classList.remove('visible');
+}
+
+function clearResults() {
+  document.getElementById('results').classList.remove('visible');
+  document.getElementById('map-container').style.display = 'none';
+  document.getElementById('map-legend').style.display = 'none';
+  if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+  hoverLine = null; allMarkers = [];
+  if (window._clickLine) { window._clickLine = null; }
+  selectedSlots = { 1: null, 2: null };
+  currentSheet2RowIndex = -1;
+  pendingSelections = {};
+  document.getElementById('selection-panel').classList.remove('visible');
+}
+</script>
+
+</body>
+</html>
